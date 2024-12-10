@@ -140,47 +140,49 @@ void build_udp_ip_datagram(char* datagram, unsigned int payload_size, char* src_
 /**
  * Builds a DNS answer
  */
-unsigned int build_dns_answer(SpoofParams *spoof_params, struct dnshdr *dns_hdr, char* answer, char* request) {
-  //unsigned int size = 0; /* answer size */
+unsigned int build_dns_answer(SpoofParams *spoof_params, struct dnshdr *dns_hdr, char* answer, char* request){
+  
+  unsigned int size = 0; /* answer size */
+  struct dnsquery *dns_query;
   unsigned char ans[4];
-  unsigned int cursor = 0;
-
+  
   sscanf(spoof_params->ip, "%hhu.%hhu.%hhu.%hhu", &ans[0], &ans[1], &ans[2], &ans[3]);
+  
+  dns_query = (struct dnsquery*)(((char*) dns_hdr) + sizeof(struct dnshdr));
+  
+  //dns_hdr
+  memcpy(&answer[0], dns_hdr->id, 2); //id
+  memcpy(&answer[2], "\x81\x80", 2); //flags
+  memcpy(&answer[4], "\x00\x01", 2); //qdcount
+  memcpy(&answer[6], "\x00\x01", 2); //ancount
+  memcpy(&answer[8], "\x00\x00", 2); //nscount
+  memcpy(&answer[10], "\x00\x00", 2); //arcount
 
-  // Copy DNS header fields
-  memcpy(answer + cursor, dns_hdr->id, 2); cursor += 2; // id
-  memcpy(answer + cursor, "\x81\x80", 2); cursor += 2; // flags
-  memcpy(answer + cursor, "\x00\x01", 2); cursor += 2; // qdcount
-  memcpy(answer + cursor, "\x00\x01", 2); cursor += 2; // ancount
-  memcpy(answer + cursor, "\x00\x00", 2); cursor += 2; // nscount
-  memcpy(answer + cursor, "\x00\x00", 2); cursor += 2; // arcount
+  //dns_query
+  size = strlen(request)+2;// +1 for the size of the first string; +1 for the last '.'
+  memcpy(&answer[12], dns_query, size); //qname
+  size+=12;
+  memcpy(&answer[size], "\x00\x01", 2); //type
+  size+=2;
+  memcpy(&answer[size], "\x00\x01", 2); //class
+  size+=2;
 
-  // Copy the query name (assuming request is in the correct format)
-  // Add length byte for each label and a final zero byte for the end of the domain
-  char *ptr = request;
-  while (*ptr) {
-    char *label_end = strchr(ptr, '.');
-    if (!label_end) label_end = ptr + strlen(ptr);
-    *(answer + cursor++) = (char)(label_end - ptr); // Length byte
-    memcpy(answer + cursor, ptr, label_end - ptr);
-    cursor += label_end - ptr;
-    ptr = label_end + (*label_end == '.' ? 1 : 0);
-  }
-  answer[cursor++] = 0; // End of domain name
-
-  // Query type and class
-  memcpy(answer + cursor, "\x00\x01", 2); cursor += 2; // type (A record)
-  memcpy(answer + cursor, "\x00\x01", 2); cursor += 2; // class (IN)
-
-  // Answer section: pointer to the query name, type, class, TTL, data length, IP address
-  memcpy(answer + cursor, "\xc0\x0c", 2); cursor += 2; // Pointer to qname
-  memcpy(answer + cursor, "\x00\x01", 2); cursor += 2; // Type (A record)
-  memcpy(answer + cursor, "\x00\x01", 2); cursor += 2; // Class (IN)
-  memcpy(answer + cursor, "\x00\x00\x00\x22", 4); cursor += 4; // TTL (34 seconds)
-  memcpy(answer + cursor, "\x00\x04", 2); cursor += 2; // Data length (4 bytes for IPv4)
-  memcpy(answer + cursor, ans, 4); cursor += 4; // IP address
-
-  return cursor; // Return the total size of the answer
+  //dns_answer
+  memcpy(&answer[size], "\xc0\x0c", 2); //pointer to qname
+  size+=2;
+  memcpy(&answer[size], "\x00\x01", 2); //type
+  size+=2;
+  memcpy(&answer[size], "\x00\x01", 2); //class
+  size+=2;
+  memcpy(&answer[size], "\x00\x00\x00\x22", 4); //ttl - 34s
+  size+=4;
+  memcpy(&answer[size], "\x00\x04", 2); //rdata length
+  size+=2;
+  memcpy(&answer[size], ans, 4); //rdata
+  size+=4;
+  
+  return size;
+  
 }
 
 /**
