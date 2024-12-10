@@ -141,7 +141,7 @@ void build_udp_ip_datagram(char* datagram, unsigned int payload_size, char* src_
  * Builds a DNS answer
  */
 unsigned int build_dns_answer(SpoofParams *spoof_params, struct dnshdr *dns_hdr, char* answer, char* request) {
-  unsigned int size = 0; /* answer size */
+  //unsigned int size = 0; /* answer size */
   unsigned char ans[4];
   unsigned int cursor = 0;
 
