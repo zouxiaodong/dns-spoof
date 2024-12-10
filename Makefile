@@ -11,7 +11,7 @@ PROGRAM=dns-spoof
 .PHONY: depend clean
 
 $(PROGRAM): $(SRCS) $(OBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OBJS) -o $(PROGRAM)
+	$(CC) $(CFLAGS) $(OBJS) -o $(PROGRAM) $(LFLAGS)
 
 $(OBJS): %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
