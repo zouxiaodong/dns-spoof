@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <resolv.h>
+#include <getopt.h>
 
 #define IP_SIZE 16
 #define REQUEST_SIZE 100
@@ -358,55 +359,77 @@ void run_filter(SpoofParams *spoof_params){
   pcap_close(handle);
 }
 
-/**
- * Program usage
- */
-void usage(char *prog_name){
-  fprintf(stderr, "Usage:%s --interface <interface> --request <request> --ip <ip>\n", prog_name);
+
+// display usage information and exit
+void usage(char *prog_name) {
+  fprintf(stderr, "Usage: %s --interface <interface> --request <request> --ip <ip>\n", prog_name);
+  fprintf(stderr, "       %s -i <interface> -r <request> -p <ip>\n", prog_name);
+  fprintf(stderr, "       %s -h|--help for help\n", prog_name);
   exit(-1);
 }
 
-/**
- * Parse arguments
- */
-void parse_args(int argc, char *argv[], SpoofParams *spoof_params){
-  
-  unsigned int i; /* iterator */
-  
-  /* invalid parameters count */
-  if(argc != 7){
-    fprintf(stderr, "Too few parameters found.\n");
-    usage(argv[0]);
+// parse command line arguments
+void parse_args(int argc, char *argv[], SpoofParams *spoof_params) {
+  int opt;
+  int option_index = 0;
+
+  // Initialize members of the SpoofParams structure to safe values
+  memset(spoof_params, 0, sizeof(SpoofParams));
+
+  static struct option long_options[] = {
+    {"interface", required_argument, 0, 'i'},
+    {"request",   required_argument, 0, 'r'},
+    {"ip",        required_argument, 0, 'p'},
+    {"help",      no_argument,       0, 'h'},
+    {0, 0, 0, 0}
+  };
+
+  while ((opt = getopt_long(argc, argv, "i:r:p:h", long_options, &option_index)) != -1) {
+    switch (opt) {
+      case 'i':
+        strncpy(spoof_params->interface, optarg, PCAP_INTERFACENAME_SIZE-1);
+        spoof_params->interface[PCAP_INTERFACENAME_SIZE-1] = '\0';
+        break;
+      case 'r':
+        strncpy(spoof_params->request, optarg, REQUEST_SIZE-1);
+        spoof_params->request[REQUEST_SIZE-1] = '\0';
+        break;
+      case 'p':
+        strncpy(spoof_params->ip, optarg, IP_SIZE-1);
+        spoof_params->ip[IP_SIZE-1] = '\0';
+        break;
+      case 'h': // Display help information
+        usage(argv[0]);
+        break;
+      case '?': // '?' is returned by getopt when an unknown option or missing argument is encountered
+        if (optopt == 'i' || optopt == 'r' || optopt == 'p') {
+          fprintf(stderr, "Option -%c requires an argument.\n", optopt);
+        } else if (isprint(optopt)) {
+          fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+        } else {
+          fprintf(stderr, "Unknown option character `\\x%x'.\n", optopt);
+        }
+        usage(argv[0]);
+        break;
+      default:
+        abort();
+    }
   }
-  
-  for(i = 1; i < argc ; i++){
-    if(!strcmp(argv[i], "--interface")){
-      strncpy(spoof_params->interface, argv[++i], PCAP_INTERFACENAME_SIZE-1);
-      spoof_params->interface[PCAP_INTERFACENAME_SIZE-1] = '\0';
-    }
-    
-    if(!strcmp(argv[i], "--request")){
-      strncpy(spoof_params->request, argv[++i], REQUEST_SIZE-1);
-      spoof_params->request[REQUEST_SIZE-1] = '\0';
-    }
-    
-    if(!strcmp(argv[i], "--ip")){
-      strncpy(spoof_params->ip, argv[++i], IP_SIZE-1);
-      spoof_params->ip[IP_SIZE-1] = '\0';
-    }
+
+  // Check that all required parameters have been provided
+  if (spoof_params->interface[0] == '\0' || spoof_params->request[0] == '\0' || spoof_params->ip[0] == '\0') {
+    fprintf(stderr, "Missing one or more required parameters.\n");
+    usage(argv[0]);
   }
 }
 
-/**
- * This is the main function
- * Gets the args and runs the filter
- */
-int main(int argc, char **argv){
-  SpoofParams spoof_params; /* arguments */
-  
+int main(int argc, char **argv) {
+  SpoofParams spoof_params;
+
   parse_args(argc, argv, &spoof_params);
-  
+
+  // Call run_filter(&spoof_params); here to execute the filter
   run_filter(&spoof_params);
-  
+
   return 0;
 }
