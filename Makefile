@@ -4,7 +4,7 @@ SHELL=/bin/bash
 CC=gcc
 SRCS=dns-spoof.c
 OBJS=dns-spoof.o
-CFLAGS=-std=c99 -pedantic -Wall -ggdb -D_GNU_SOURCE
+CFLAGS=-std=c99 -pedantic -Wall -fstack-protector-all -fsanitize=address -ggdb -D_GNU_SOURCE
 LFLAGS=-lpcap
 PROGRAM=dns-spoof
 
